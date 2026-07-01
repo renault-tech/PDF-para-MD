@@ -27,24 +27,32 @@ st.markdown("""
 
     .block-container {
         max-width: 900px;
-        padding-top: 3rem;
-        padding-bottom: 4rem;
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+    }
+
+    /* Reduce vertical gaps between stacked widgets */
+    div[data-testid="stVerticalBlock"] > div {
+        margin-bottom: 0 !important;
+    }
+    div[data-testid="stElementContainer"] {
+        margin-bottom: 0.35rem;
     }
 
     /* Hero title */
     .ts-hero {
         text-align: center;
-        margin-bottom: 2.5rem;
+        margin-bottom: 1.2rem;
     }
     .ts-hero h1 {
-        font-size: 2.75rem;
+        font-size: 2rem;
         font-weight: 700;
         letter-spacing: -0.03em;
         color: #1d1d1f;
-        margin-bottom: 0.4rem;
+        margin-bottom: 0.2rem;
     }
     .ts-hero p {
-        font-size: 1.05rem;
+        font-size: 0.95rem;
         font-weight: 400;
         color: #6e6e73;
         margin: 0 auto;
@@ -126,6 +134,14 @@ st.markdown("""
         color: #1d1d1f;
         font-weight: 600;
         letter-spacing: -0.01em;
+        margin-top: 0.6rem !important;
+        margin-bottom: 0.4rem !important;
+        font-size: 1.1rem !important;
+    }
+
+    /* Metrics: tighter padding for compact layout */
+    div[data-testid="stMetric"] {
+        padding: 0.6rem 0.9rem !important;
     }
 
     /* Progress bar */
@@ -153,32 +169,51 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+def _is_protected_line(stripped: str) -> bool:
+    """Linhas de tabelas, títulos e listas nunca devem ser removidas pela limpeza."""
+    return (
+        stripped.startswith("|")
+        or stripped.startswith("#")
+        or stripped.startswith("-")
+        or stripped.startswith("*")
+        or stripped.startswith(">")
+        or bool(re.match(r'^\d+[.)]\s', stripped))
+    )
+
+
 def clean_markdown(text: str) -> str:
-    """Remove cabeçalhos e rodapés repetitivos comuns em PDFs."""
+    """Remove cabeçalhos/rodapés repetitivos comuns em PDFs, sem tocar em tabelas, títulos ou listas."""
     lines = text.splitlines()
     line_freq: dict[str, int] = {}
     for line in lines:
         stripped = line.strip()
-        if stripped:
+        if stripped and not _is_protected_line(stripped):
             line_freq[stripped] = line_freq.get(stripped, 0) + 1
 
     total_pages_estimate = max(line_freq.values()) if line_freq else 1
-    repetition_threshold = max(3, total_pages_estimate // 2)
+    # Threshold conservador: só remove linhas curtas repetidas MUITAS vezes
+    # (típico de cabeçalho/rodapé de página), nunca conteúdo estrutural.
+    repetition_threshold = max(5, total_pages_estimate)
 
     cleaned = [
         line for line in lines
-        if line_freq.get(line.strip(), 0) < repetition_threshold or not line.strip()
+        if not line.strip()
+        or _is_protected_line(line.strip())
+        or len(line.strip()) > 80
+        or line_freq.get(line.strip(), 0) < repetition_threshold
     ]
     # Colapsar múltiplas linhas em branco consecutivas
     result = re.sub(r'\n{3,}', '\n\n', "\n".join(cleaned))
     return result.strip()
 
 
-def convert_file(file_path: str) -> str:
+def convert_file(file_path: str, remove_repeated: bool = False) -> str:
     converter = DocumentConverter()
     result = converter.convert(file_path)
     raw_md = result.document.export_to_markdown()
-    return clean_markdown(raw_md)
+    if remove_repeated:
+        return clean_markdown(raw_md)
+    return raw_md.strip()
 
 
 tab1, tab2 = st.tabs(["📄 Conversão Individual", "📦 Conversão em Lote"])
@@ -190,6 +225,12 @@ with tab1:
         help="Suporte a PDF, Word (.docx) e Excel (.xlsx)",
         key="single_file"
     )
+    remove_repeated_single = st.checkbox(
+        "Remover cabeçalhos/rodapés repetitivos",
+        value=False,
+        help="Desligado por padrão para garantir conversão íntegra, sem perda de texto ou tabelas.",
+        key="remove_repeated_single"
+    )
 
     if uploaded:
         suffix = Path(uploaded.name).suffix
@@ -199,7 +240,7 @@ with tab1:
 
         with st.spinner(f"Convertendo **{uploaded.name}** para Markdown…"):
             try:
-                markdown_output = convert_file(tmp_path)
+                markdown_output = convert_file(tmp_path, remove_repeated=remove_repeated_single)
                 st.session_state["md_output"] = markdown_output
                 st.session_state["source_name"] = Path(uploaded.name).stem
             except Exception as exc:
@@ -220,7 +261,7 @@ with tab1:
         col2.metric("Caracteres", f"{char_count:,}")
 
         st.subheader("Visualização do Markdown")
-        st.text_area("", value=md, height=400, label_visibility="collapsed")
+        st.text_area("", value=md, height=280, label_visibility="collapsed")
 
         col_copy, col_dl = st.columns(2)
 
@@ -261,6 +302,12 @@ with tab2:
         accept_multiple_files=True,
         key="batch_files"
     )
+    remove_repeated_batch = st.checkbox(
+        "Remover cabeçalhos/rodapés repetitivos",
+        value=False,
+        help="Desligado por padrão para garantir conversão íntegra, sem perda de texto ou tabelas.",
+        key="remove_repeated_batch"
+    )
 
     if uploaded_files:
         st.write(f"**{len(uploaded_files)} arquivo(s) selecionado(s)**")
@@ -286,7 +333,7 @@ with tab2:
                     tmp_path = tmp.name
 
                 try:
-                    markdown_output = convert_file(tmp_path)
+                    markdown_output = convert_file(tmp_path, remove_repeated=remove_repeated_batch)
                     file_stem = Path(uploaded_file.name).stem
 
                     results.append({
@@ -305,7 +352,8 @@ with tab2:
                     results.append({
                         "name": Path(uploaded_file.name).stem,
                         "content": None,
-                        "status": f"❌ {str(exc)[:50]}"
+                        "status": "❌",
+                        "error": str(exc)
                     })
                     failed += 1
                 finally:
@@ -329,13 +377,16 @@ with tab2:
         col4.metric("Total de Caracteres", f"{st.session_state['batch_total_chars']:,}")
 
         st.subheader("📋 Arquivos")
-        with st.expander("Ver lista de conversões"):
-            for result in results:
-                status_icon = result["status"]
-                if result["status"] == "✅":
-                    st.write(f"{status_icon} **{result['name']}.md** | {result['tokens']:,} tokens | {result['chars']:,} chars")
-                else:
-                    st.write(f"{status_icon} **{result['name']}**")
+        has_errors = any(r["status"] != "✅" for r in results)
+        with st.expander("Ver lista de conversões", expanded=has_errors):
+            list_container = st.container(height=260)
+            with list_container:
+                for result in results:
+                    if result["status"] == "✅":
+                        st.write(f"✅ **{result['name']}.md** | {result['tokens']:,} tokens | {result['chars']:,} chars")
+                    else:
+                        st.write(f"❌ **{result['name']}**")
+                        st.code(result.get("error", "Erro desconhecido"), language=None)
 
         if any(r["status"] == "✅" for r in results):
             zip_buffer = io.BytesIO()
