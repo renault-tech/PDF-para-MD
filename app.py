@@ -209,10 +209,13 @@ def clean_markdown(text: str) -> str:
     return result.strip()
 
 
+@st.cache_resource(show_spinner="Carregando modelos de conversão (só na primeira vez)…")
 def _build_converter() -> DocumentConverter:
     # EasyOCR no lugar do motor padrão (PP-OCRv6/torch), que trava com
     # "Unsupported configuration" neste ambiente. EasyOCR é maduro e
     # estável, cobrindo tanto PDFs digitais quanto escaneados/imagens.
+    # Cacheado via st.cache_resource: sem isso, cada arquivo recriava o
+    # DocumentConverter e recarregava os pesos do EasyOCR do zero.
     pdf_options = PdfPipelineOptions(
         do_ocr=True,
         ocr_options=EasyOcrOptions(lang=["pt", "en"]),
