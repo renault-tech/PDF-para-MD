@@ -5,7 +5,9 @@ import re
 import zipfile
 import io
 from pathlib import Path
-from docling.document_converter import DocumentConverter
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.document_converter import DocumentConverter, PdfFormatOption
 
 st.set_page_config(
     page_title="TokenSaver",
@@ -207,8 +209,18 @@ def clean_markdown(text: str) -> str:
     return result.strip()
 
 
+def _build_converter() -> DocumentConverter:
+    # OCR desativado: nossos PDFs são texto nativo (não escaneados), e o
+    # motor de OCR padrão do docling (PP-OCRv6/torch) trava com um erro
+    # "Unsupported configuration" neste ambiente.
+    pdf_options = PdfPipelineOptions(do_ocr=False)
+    return DocumentConverter(
+        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options)}
+    )
+
+
 def convert_file(file_path: str, remove_repeated: bool = False) -> str:
-    converter = DocumentConverter()
+    converter = _build_converter()
     result = converter.convert(file_path)
     raw_md = result.document.export_to_markdown()
     if remove_repeated:
