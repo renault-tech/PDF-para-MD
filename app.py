@@ -8,13 +8,149 @@ from pathlib import Path
 from docling.document_converter import DocumentConverter
 
 st.set_page_config(
-    page_title="TokenSaver ⚡",
+    page_title="TokenSaver",
     page_icon="⚡",
     layout="wide",
 )
 
-st.title("TokenSaver ⚡")
-st.caption("Converta PDF, DOCX e XLSX em Markdown otimizado para LLMs — 100% local, zero custo de tokens.")
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    }
+
+    .main {
+        background-color: #f5f5f7;
+    }
+
+    .block-container {
+        max-width: 900px;
+        padding-top: 3rem;
+        padding-bottom: 4rem;
+    }
+
+    /* Hero title */
+    .ts-hero {
+        text-align: center;
+        margin-bottom: 2.5rem;
+    }
+    .ts-hero h1 {
+        font-size: 2.75rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: #1d1d1f;
+        margin-bottom: 0.4rem;
+    }
+    .ts-hero p {
+        font-size: 1.05rem;
+        font-weight: 400;
+        color: #6e6e73;
+        margin: 0 auto;
+        max-width: 520px;
+    }
+
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 4px;
+        background-color: #e8e8ed;
+        padding: 4px;
+        border-radius: 12px;
+        justify-content: center;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 9px;
+        padding: 8px 20px;
+        font-weight: 500;
+        color: #6e6e73;
+        background-color: transparent;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #ffffff !important;
+        color: #1d1d1f !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    /* Cards / containers */
+    div[data-testid="stFileUploaderDropzone"] {
+        background-color: #ffffff;
+        border: 1.5px dashed #d2d2d7;
+        border-radius: 16px;
+    }
+    div[data-testid="stFileUploaderDropzone"]:hover {
+        border-color: #0071e3;
+    }
+
+    /* Metrics */
+    div[data-testid="stMetric"] {
+        background-color: #ffffff;
+        border-radius: 14px;
+        padding: 1rem 1.2rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    div[data-testid="stMetricValue"] {
+        color: #1d1d1f;
+        font-weight: 700;
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #6e6e73;
+    }
+
+    /* Buttons */
+    .stButton button, .stDownloadButton button {
+        border-radius: 980px;
+        font-weight: 600;
+        border: none;
+        padding: 0.6rem 1.4rem;
+        background-color: #0071e3;
+        color: white;
+        transition: background-color 0.2s ease;
+    }
+    .stButton button:hover, .stDownloadButton button:hover {
+        background-color: #0077ed;
+        color: white;
+    }
+
+    /* Text area */
+    textarea {
+        border-radius: 14px !important;
+        background-color: #ffffff !important;
+        border: 1px solid #e5e5ea !important;
+        font-family: 'SF Mono', 'Menlo', monospace !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* Subheaders */
+    h3 {
+        color: #1d1d1f;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+
+    /* Progress bar */
+    div[data-testid="stProgress"] > div > div {
+        background-color: #0071e3;
+    }
+
+    /* Expander */
+    details {
+        background-color: #ffffff;
+        border-radius: 14px;
+        border: 1px solid #e5e5ea;
+    }
+
+    /* Hide default streamlit chrome */
+    #MainMenu, footer, header {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div class="ts-hero">
+    <h1>TokenSaver ⚡</h1>
+    <p>Converta PDF, DOCX e XLSX em Markdown otimizado para LLMs — 100% local, zero custo de tokens.</p>
+</div>
+""", unsafe_allow_html=True)
 
 
 def clean_markdown(text: str) -> str:
@@ -94,8 +230,12 @@ with tab1:
                 <textarea id="md-content" style="display:none">{md.replace('"', '&quot;')}</textarea>
                 <button onclick="navigator.clipboard.writeText(document.getElementById('md-content').value);
                                 this.innerText='✅ Copiado!';"
-                        style="width:100%;padding:8px 0;background:#4CAF50;color:white;
-                               border:none;border-radius:6px;cursor:pointer;font-size:15px;">
+                        style="width:100%;padding:10px 0;background:#0071e3;color:white;
+                               border:none;border-radius:980px;cursor:pointer;font-size:14px;
+                               font-weight:600;font-family:'Inter',-apple-system,sans-serif;
+                               transition:background-color 0.2s ease;"
+                        onmouseover="this.style.backgroundColor='#0077ed'"
+                        onmouseout="this.style.backgroundColor='#0071e3'">
                     📋 Copiar para Clipboard
                 </button>
                 """,
