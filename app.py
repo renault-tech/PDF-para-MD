@@ -6,7 +6,7 @@ import zipfile
 import io
 from pathlib import Path
 from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.datamodel.pipeline_options import PdfPipelineOptions, EasyOcrOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 
 st.set_page_config(
@@ -210,10 +210,13 @@ def clean_markdown(text: str) -> str:
 
 
 def _build_converter() -> DocumentConverter:
-    # OCR desativado: nossos PDFs são texto nativo (não escaneados), e o
-    # motor de OCR padrão do docling (PP-OCRv6/torch) trava com um erro
-    # "Unsupported configuration" neste ambiente.
-    pdf_options = PdfPipelineOptions(do_ocr=False)
+    # EasyOCR no lugar do motor padrão (PP-OCRv6/torch), que trava com
+    # "Unsupported configuration" neste ambiente. EasyOCR é maduro e
+    # estável, cobrindo tanto PDFs digitais quanto escaneados/imagens.
+    pdf_options = PdfPipelineOptions(
+        do_ocr=True,
+        ocr_options=EasyOcrOptions(lang=["pt", "en"]),
+    )
     return DocumentConverter(
         format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options)}
     )
