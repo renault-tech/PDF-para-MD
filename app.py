@@ -27,28 +27,43 @@ st.markdown("""
 
     .block-container {
         max-width: 900px;
-        padding-top: 3rem;
-        padding-bottom: 4rem;
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+    }
+
+    /* Reduce vertical gaps between stacked widgets */
+    div[data-testid="stVerticalBlock"] > div {
+        margin-bottom: 0 !important;
+    }
+    div[data-testid="stElementContainer"] {
+        margin-bottom: 0.35rem;
     }
 
     /* Hero title */
     .ts-hero {
         text-align: center;
-        margin-bottom: 2.5rem;
+        margin-bottom: 1.2rem;
     }
     .ts-hero h1 {
-        font-size: 2.75rem;
+        font-size: 2rem;
         font-weight: 700;
         letter-spacing: -0.03em;
         color: #1d1d1f;
-        margin-bottom: 0.4rem;
+        margin-bottom: 0.2rem;
     }
     .ts-hero p {
-        font-size: 1.05rem;
+        font-size: 0.95rem;
         font-weight: 400;
         color: #6e6e73;
         margin: 0 auto;
         max-width: 520px;
+    }
+
+    /* Scrollable results list so long batches don't push the page down */
+    .ts-scroll-list {
+        max-height: 260px;
+        overflow-y: auto;
+        padding-right: 0.5rem;
     }
 
     /* Tabs */
@@ -126,6 +141,14 @@ st.markdown("""
         color: #1d1d1f;
         font-weight: 600;
         letter-spacing: -0.01em;
+        margin-top: 0.6rem !important;
+        margin-bottom: 0.4rem !important;
+        font-size: 1.1rem !important;
+    }
+
+    /* Metrics: tighter padding for compact layout */
+    div[data-testid="stMetric"] {
+        padding: 0.6rem 0.9rem !important;
     }
 
     /* Progress bar */
@@ -220,7 +243,7 @@ with tab1:
         col2.metric("Caracteres", f"{char_count:,}")
 
         st.subheader("Visualização do Markdown")
-        st.text_area("", value=md, height=400, label_visibility="collapsed")
+        st.text_area("", value=md, height=280, label_visibility="collapsed")
 
         col_copy, col_dl = st.columns(2)
 
@@ -305,7 +328,8 @@ with tab2:
                     results.append({
                         "name": Path(uploaded_file.name).stem,
                         "content": None,
-                        "status": f"❌ {str(exc)[:50]}"
+                        "status": "❌",
+                        "error": str(exc)
                     })
                     failed += 1
                 finally:
@@ -329,13 +353,16 @@ with tab2:
         col4.metric("Total de Caracteres", f"{st.session_state['batch_total_chars']:,}")
 
         st.subheader("📋 Arquivos")
-        with st.expander("Ver lista de conversões"):
+        has_errors = any(r["status"] != "✅" for r in results)
+        with st.expander("Ver lista de conversões", expanded=has_errors):
+            st.markdown('<div class="ts-scroll-list">', unsafe_allow_html=True)
             for result in results:
-                status_icon = result["status"]
                 if result["status"] == "✅":
-                    st.write(f"{status_icon} **{result['name']}.md** | {result['tokens']:,} tokens | {result['chars']:,} chars")
+                    st.write(f"✅ **{result['name']}.md** | {result['tokens']:,} tokens | {result['chars']:,} chars")
                 else:
-                    st.write(f"{status_icon} **{result['name']}**")
+                    st.write(f"❌ **{result['name']}**")
+                    st.code(result.get("error", "Erro desconhecido"), language=None)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         if any(r["status"] == "✅" for r in results):
             zip_buffer = io.BytesIO()
