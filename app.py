@@ -216,9 +216,14 @@ def _build_converter() -> DocumentConverter:
     # estável, cobrindo tanto PDFs digitais quanto escaneados/imagens.
     # Cacheado via st.cache_resource: sem isso, cada arquivo recriava o
     # DocumentConverter e recarregava os pesos do EasyOCR do zero.
+    # generate_page_images/generate_picture_images desligados: não usamos
+    # essas imagens e mantê-las ligadas multiplica o uso de memória em
+    # documentos longos, o que derruba o processo em hosts com pouca RAM.
     pdf_options = PdfPipelineOptions(
         do_ocr=True,
         ocr_options=EasyOcrOptions(lang=["pt", "en"]),
+        generate_page_images=False,
+        generate_picture_images=False,
     )
     return DocumentConverter(
         format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options)}
